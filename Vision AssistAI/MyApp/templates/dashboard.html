@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Capture and Gallery Access</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #ff4081 0%, #81d4fa 100%);
+            font-family: Arial, sans-serif;
+            color: white;
+            text-align: center;
+        }
+
+        .container {
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .small-screen {
+            width: 300px;
+            margin-right: 20px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+        }
+
+        .small-screen h2 {
+            margin-bottom: 10px;
+        }
+
+        .small-screen img {
+            width: 100%;
+            border: 2px solid white;
+            border-radius: 10px;
+        }
+
+        .small-screen p {
+            color: white;
+            word-wrap: break-word;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        video, canvas {
+            width: 300px;
+            height: 225px;
+            border: 2px solid white;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        button {
+            display: block;
+            width: 200px;
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    {% block content %}
+        <h2> Dashboard : {{request.user.username}}</h2>
+    {% endblock %}
+
+    <div class="container">
+        <div class="small-screen" id="small-screen">
+            <h2>Captured Image</h2>
+            <img id="captured-preview" alt="Captured Image" />
+            <p id="image-url">No image captured</p>
+        </div>
+        <div class="main-content">
+            <h1>Image Capture and Gallery Access</h1>
+            <video id="camera-feed" autoplay></video>
+            <canvas id="captured-image" style="display:none;"></canvas>
+            <div class="button-container">
+                <button id="capture-button">Capture Image</button>
+                <button id="recapture-button" style="display:none;">Recapture Image</button>
+                <button id="gallery-button">Access Gallery</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('capture-button').addEventListener('click', function() {
+            captureImage();
+        });
+
+        document.getElementById('recapture-button').addEventListener('click', function() {
+            startCamera();
+            document.getElementById('recapture-button').style.display = 'none';
+            document.getElementById('capture-button').style.display = 'block';
+        });
+
+        document.getElementById('gallery-button').addEventListener('click', function() {
+            accessGallery();
+        });
+
+        let videoStream;
+
+        function startCamera() {
+            const video = document.getElementById('camera-feed');
+            const canvas = document.getElementById('captured-image');
+            const previewImage = document.getElementById('captured-preview');
+            const imageUrl = document.getElementById('image-url');
+
+            // Reset the display
+            video.style.display = 'block';
+            canvas.style.display = 'none';
+            previewImage.src = '';
+            imageUrl.textContent = 'No image captured';
+
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: true }).then(function(stream) {
+                    video.srcObject = stream;
+                    videoStream = stream;
+                }).catch(function(error) {
+                    console.error('Camera access denied.', error);
+                });
+            } else {
+                alert('Camera access is not supported in your browser.');
+            }
+        }
+
+        function captureImage() {
+            const video = document.getElementById('camera-feed');
+            const canvas = document.getElementById('captured-image');
+            const context = canvas.getContext('2d');
+            const previewImage = document.getElementById('captured-preview');
+            const imageUrl = document.getElementById('image-url');
+
+            // Draw the video frame to the canvas
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Stop the video stream
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+            }
+
+            // Display the captured image
+            const dataUrl = canvas.toDataURL('image/png');
+            displayImage(dataUrl);
+
+            // Send the image data to the backend
+            postImageToBackend(dataUrl);
+        }
+
+        function accessGallery() {
+            let input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = function(event) {
+                let file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const dataUrl = e.target.result;
+                        displayImage(dataUrl);
+
+                        // Send the image data to the backend
+                        postImageToBackend(dataUrl);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+            input.click();
+        }
+
+        function displayImage(dataUrl) {
+            const previewImage = document.getElementById('captured-preview');
+            const imageUrl = document.getElementById('image-url');
+
+            // Display the image
+            previewImage.src = dataUrl;
+
+            // Display the full URL in the hyperlink
+            const shortUrl = dataUrl.substring(0, 20) + '...';
+            imageUrl.innerHTML = `<a href="${dataUrl}" target="_blank">${shortUrl}</a>`;
+
+            // Hide the video element and show the preview
+            document.getElementById('camera-feed').style.display = 'none';
+            document.getElementById('captured-image').style.display = 'none';
+            document.getElementById('small-screen').style.display = 'block';
+
+            // Show the recapture button and hide the capture button
+            document.getElementById('capture-button').style.display = 'none';
+            document.getElementById('recapture-button').style.display = 'block';
+        }
+
+        // Function to get CSRF token from cookies
+        function getCsrfToken() {
+            let token = null;
+            const cookies = document.cookie.split(';');
+            cookies.forEach(cookie => {
+                const [name, value] = cookie.split('=');
+                if (name.trim() === 'csrftoken') {
+                    token = value;
+                }
+            });
+            return token;
+        }
+
+        // Function to post image data to the backend
+        function postImageToBackend(dataUrl) {
+            fetch('/upload-image/', {  // Ensure this URL is correct
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),  // Include CSRF token
+                },
+                body: JSON.stringify({ image: dataUrl }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Success:', data);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+        }
+
+        // Start the camera when the page loads
+        startCamera();
+    </script>
+</body>
+</html>
