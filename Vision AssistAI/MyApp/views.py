@@ -19,6 +19,9 @@ import base64
 import io
 import tempfile
 
+from gtts import gTTS
+import os
+
 
 
 
@@ -71,8 +74,8 @@ def upload_image_to_imgur(image_path):
             response = requests.post(url, headers=headers, files={"image": image_file})
         
         # Print response for debugging
-        print(f"Response Status Code: {response.status_code}")
-        print(f"Response Content: {response.text}")
+        #print(f"Response Status Code: {response.status_code}")
+        #print(f"Response Content: {response.text}")
         
         response_data = response.json()
         
@@ -97,7 +100,7 @@ def analyze_image(image_url):
           "type": "image_url",
           "image_url": {
             "url": image_url,
-            "detail": "high"
+            "detail": "low"
           },
         },
       ],
@@ -169,10 +172,12 @@ def handle_image_post(request):
                 print("temprary saving error ")                    
             print("decode url ",image_data_url)
             description = analyze_image(image_data_url)
-            print(description)
+            #print(description)
             
             # Respond with the received URL for demonstration
+            texGeneration(description)
             response_data = {'received_image_url': description}
+
             return JsonResponse(response_data, status=200)
         except json.JSONDecodeError:
             return JsonResponse({'error': 'Invalid JSON'}, status=400)
@@ -180,5 +185,56 @@ def handle_image_post(request):
         return JsonResponse({'error': 'Invalid method'}, status=405)
     
 
+def text_to_speech(text, output_file='output.mp3'):
+    """
+    Convert text to speech and save it as an MP3 file.
+
+    Args:
+    text (str): The text to convert to speech.
+    output_file (str): The name of the output MP3 file. Default is 'output.mp3'.
+
+    Returns:
+    None
+    """
+    try:
+        # Create a gTTS object with the given text and language
+        tts = gTTS(text=text, lang='en')
+        # Create a gTTS object with the given text and language
+        tts = gTTS(text=text, lang='en')
+        output_file="C:/Users/mf19-14/AuthenticationProject/MyApp/templates/out.mp3"
+        # Save the speech to the output file
+        tts.save(output_file)
+        print(f"Speech saved to {output_file}")
+        # Save the speech to the output file
+        tts.save(output_file)
+        print(f"Speech saved to {output_file}")
+        os.startfile(output_file)
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 
+def texGeneration(text):
+
+    client = openai.OpenAI(
+        api_key="647bab5949254a898c50e57bccda014a",
+        base_url="https://api.aimlapi.com",
+    )
+
+    response = client.chat.completions.create(
+        model="meta-llama/Llama-3-8b-chat-hf",
+        messages=[
+            {
+                "role": "system",
+                "content": "please give the exact text like chatboot don't generate extra \n "+text,
+            },
+        
+        ],
+    )
+
+    message = response.choices[0].message.content
+    
+    text_to_speech(message)
+    print(f"Assistant:################# {message}")
+
+
+    
