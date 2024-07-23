@@ -1,6 +1,21 @@
+
 Vision AssistAI: Empowering the Visually Impaired 
 
+Installation:
+             The webpage connect through django. You sure have Django sever installed.
+	     
+	     Enter IP, it will push you to the main website.  
+
+
+Step 1: 
  
+  first you need to sign up, then login to Vision Assistence app. 
+
+Step 2: 
+  Now, you entered in the dashboard, -> there are two buttons.
+  click on capute button, after few second the app will responce you, though voice. 
+step 3:
+   you can also read picture from gallery. Click on gallary button, and select the picture. this will be voice about your image.  
 
 Abstract: 
 
